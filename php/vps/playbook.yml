@@ -1,0 +1,41 @@
+---
+ - hosts: web
+   user: stsk
+   sudo: yes
+   tasks:
+    - yum: name=vim state=latest
+    - name: install apache
+      yum: name=httpd state=present
+    - name: start apache and enabled
+      service: name=httpd state=started enabled=yes
+    - name: set epel repository
+      shell: rpm -Uvh --force http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+    - name: set remi repository
+      command: sudo rpm -Uvh --force http://rpms.famillecollet.com/enterprise/remi-release-6.rpm
+    - name: install php packages
+      yum: name={{item}} enablerepo=remi,epel state=present
+      with_items:
+       - php
+       - php-pear
+       - php-devel
+       - php-mbstring
+       - php-pdo
+       - php-mysql
+       - php-gd
+       - php-xdebug
+      notify:
+       - restart apache
+    - name: install mysql
+      yum: name={{ item }} enablerepo=remi,epel state=installed
+      with_items:
+       - mysql-server
+       - MySQL-python
+      notify:
+        - start mysql
+   handlers:
+    - name: restart apache
+      service: name=httpd state=restarted enabled=yes #enabled=yes 自動起動
+    - name: start mysql
+      service: name=mysqld state=started enabled=yes
+    - name: mysql set password
+      command: mysqladmin -u root password "{{ mysql_root_pw }}"
